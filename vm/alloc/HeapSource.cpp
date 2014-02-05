@@ -37,6 +37,12 @@ static void setIdealFootprint(size_t max);
 static size_t getMaximumSize(const HeapSource *hs);
 static void trimHeaps();
 
+#ifdef DALVIK_LOWMEM
+static const bool lowmem = true;
+#else
+static const bool lowmem = false;
+#endif
+
 #define HEAP_UTILIZATION_MAX        1024
 #define DEFAULT_HEAP_UTILIZATION    512     // Range 1..HEAP_UTILIZATION_MAX
 #define HEAP_IDEAL_FREE_DEFAULT     (7.2 * 1024 * 1024)
@@ -99,6 +105,12 @@ struct Heap {
      * The highest address of this heap, exclusive.
      */
     char *limit;
+
+    /*
+     * If the heap has an mspace, the current high water mark in
+     * allocations requested via dvmHeapSourceMorecore.
+    */
+    char *brk;
 };
 
 struct HeapSource {
@@ -373,12 +385,21 @@ static bool addNewHeap(HeapSource *hs)
         return false;
     }
 
-    size_t startSize = gDvm.heapStartingSize;
-    heap.maximumSize = hs->growthLimit - overhead;
-    heap.concurrentStartBytes = startSize - concurrentStart;
-    heap.base = base;
-    heap.limit = heap.base + heap.maximumSize;
-    heap.msp = createMspace(base, startSize * 2, hs->maximumSize - overhead);
+    if(lowmem) {
+        heap.maximumSize = hs->growthLimit - overhead;
+        heap.concurrentStartBytes = HEAP_MIN_FREE - concurrentStart;
+        heap.base = base;
+        heap.limit = heap.base + heap.maximumSize;
+        heap.brk = heap.base + HEAP_MIN_FREE;
+        heap.msp = createMspace(base, HEAP_MIN_FREE, hs->maximumSize - overhead);
+    } else {
+        size_t startSize = gDvm.heapStartingSize;
+        heap.maximumSize = hs->growthLimit - overhead;
+        heap.concurrentStartBytes = startSize - concurrentStart;
+        heap.base = base;
+        heap.limit = heap.base + heap.maximumSize;
+        heap.msp = createMspace(base, startSize * 2, hs->maximumSize - overhead);
+    }
     if (heap.msp == NULL) {
         return false;
     }
@@ -596,13 +617,17 @@ fail:
 
 bool dvmHeapSourceStartupAfterZygote()
 {
-    //For each new application forked, we need to reset softLimit and
-    //concurrentStartBytes to be the correct expected value, not the one
-    //inherit from Zygote
-    HeapSource *hs = gHs;
-    hs->softLimit=SIZE_MAX;
-    hs->heaps[0].concurrentStartBytes = mspace_footprint(hs->heaps[0].msp) - concurrentStart;
-    return gDvm.concurrentMarkSweep ? gcDaemonStartup() : true;
+    if(lowmem) {
+        return gDvm.concurrentMarkSweep ? gcDaemonStartup() : true;
+    } else {
+        //For each new application forked, we need to reset softLimit and
+        //concurrentStartBytes to be the correct expected value, not the one
+        //inherit from Zygote
+        HeapSource *hs = gHs;
+        hs->softLimit=SIZE_MAX;
+        hs->heaps[0].concurrentStartBytes = mspace_footprint(hs->heaps[0].msp) - concurrentStart;
+        return gDvm.concurrentMarkSweep ? gcDaemonStartup() : true;
+    }
 }
 
 /*
