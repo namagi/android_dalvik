@@ -88,7 +88,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
     int hoistCount = 0;
 
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-    ALOGD("GlobalOpts LoopLoadHoisting applied on '%s'", cUnit->method->name);
+    LOGD("GlobalOpts LoopLoadHoisting applied on '%s'", cUnit->method->name);
     cUnit->printMe = true;
 #endif
 
@@ -110,7 +110,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
 
     if (labelLIR->opcode != kArmPseudoNormalBlockLabel) {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-        ALOGD("Can't hoist - no loop label found!");
+        LOGD("Can't hoist - no loop label found!");
 #endif
         return;
     }
@@ -120,7 +120,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
     }
     else if ((ArmLIR *) insertLIR->generic.target != labelLIR) {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-        ALOGD("Can't hoist - branch target does not match!");
+        LOGD("Can't hoist - branch target does not match!");
 #endif
         return;
     }
@@ -143,7 +143,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
             ((thisLIR->useMask & ENCODE_DALVIK_REG) != 0)) {
             if (regCount >= MAX_REGISTER_OPS) {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-                ALOGD("Out of register list space!");
+                LOGD("Out of register list space!");
 #endif
                 return;
             }
@@ -164,7 +164,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
                    ((thisLIR->defMask & ENCODE_DALVIK_REG) != 0)) {
             if (regCount >= MAX_REGISTER_OPS) {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-                ALOGD("Out of register list space!");
+                LOGD("Out of register list space!");
 #endif
                 return;
             }
@@ -190,7 +190,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
                        (thisLIR->opcode <= kThumbBlxR))
             {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-                ALOGD("Trace contains branch to subroutine!");
+                LOGD("Trace contains branch to subroutine!");
 #endif
                 return;
             }
@@ -206,13 +206,13 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
     defLoadMask &= ~(defMask | masterDefMask);
     if (!isValidLoop || (defLoadMask == 0)) {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-        ALOGD("Loop not valid, or defLoadMask (0x%llx) was zero!", defLoadMask);
+        LOGD("Loop not valid, or defLoadMask (0x%llx) was zero!", defLoadMask);
 #endif
         return;
     }
 
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-    ALOGD("Masks: masterDef: 0x%llx, def: 0x%llx, final defLoad: 0x%llx",
+    LOGD("Masks: masterDef: 0x%llx, def: 0x%llx, final defLoad: 0x%llx",
           masterDefMask, defMask, defLoadMask);
 #endif
 
@@ -235,7 +235,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
                         }
                     }
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-                    ALOGD("Register alias found between these two load ops:");
+                    LOGD("Register alias found between these two load ops:");
                     dvmDumpLIRInsn((LIR*)thisLIR, NULL);
                     dvmDumpLIRInsn((LIR*)regLIR[i], NULL);
 #endif
@@ -245,7 +245,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
 
             if (!foundAlias) {
 #ifdef LOOP_LOAD_HOIST_VERBOSE
-                ALOGD("Hoisting this load op:");
+                LOGD("Hoisting this load op:");
                 dvmDumpLIRInsn((LIR*)thisLIR, NULL);
 #endif
                 ArmLIR *newLoadLIR = (ArmLIR *) dvmCompilerNew(sizeof(ArmLIR),
@@ -260,7 +260,7 @@ static void applyLoopLoadHoisting(CompilationUnit *cUnit)
     }
 
     if (cUnit->printMe)
-        ALOGD("GlobalOpt LoopLoadHoist hoisted %d load ops.", hoistCount);
+        LOGD("GlobalOpt LoopLoadHoist hoisted %d load ops.", hoistCount);
 }
 
 void dvmCompilerApplyGlobalOptimizations(CompilationUnit *cUnit)
